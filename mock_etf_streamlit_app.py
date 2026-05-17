@@ -29,38 +29,44 @@ import yfinance as yf
 
 
 TIERS: Dict[str, List[str]] = {
-    "Tier 1 — Pre-revenue / revenue-collapsing pure-plays": [
+    "Tier 1 — Pre-revenue speculative, highest canary value": [
         "OKLO", "SMR", "NNE", "LEU", "RGTI", "QBTS", "QUBT", "IONQ"
     ],
-    "Tier 2 — Specialty silicon / optical small-caps": [
-        "AXTI", "POET", "AAOI", "MVIS", "KOPN"
+    "Tier 2 — Specialty silicon/optical micro-caps, AXTI archetype": [
+        "AXTI", "POET", "AAOI", "MVIS", "KOPN", "AMBA", "WOLF", "AEHR"
     ],
-    "Tier 3 — Crypto-pivot-to-AI plays": [
+    "Tier 3 — Crypto-to-AI pivots, no AI revenue yet": [
         "KEEL", "BTDR", "CLSK", "HIVE", "RIOT", "MARA", "CIFR"
     ],
-    "Tier 4 — AI-tagged software": [
+    "Tier 4 — AI-tagged small-cap software, valuation/revenue mismatch": [
         "BBAI", "SOUN", "AI", "TEM", "SERV", "SYM"
     ],
-    "Tier 5 — AI infrastructure with real but volatile revenue": [
-        "APLD", "IREN", "CRWV", "NBIS"
+    "Tier 5 — AI-software extreme multiples, real revenue": [
+        "PLTR", "APP", "SNOW", "NET", "DDOG", "MDB", "CFLT", "ESTC", "GTLB", "FROG", "TTD"
     ],
-    "Tier 6 — Memory supercycle": [
-        "MU", "WDC", "STX"
+    "Tier 6 — AI infra real-but-stretched, AI-priced multiples": [
+        "APLD", "IREN", "CRWV", "NBIS", "CLS"
     ],
-    "Tier 7 — Liquid cooling / power infrastructure": [
-        "VRT", "ETN", "MOD", "AAON", "PH", "TT"
-    ],
-    "Tier 8 — AI-utility plays": [
-        "VST", "CEG", "TLN", "NRG"
-    ],
-    "Tier 9 — Silicon photonics / optical at AI-cycle peak multiples": [
+    "Tier 7 — Silicon photonics/optical established": [
         "LITE", "COHR", "TSEM", "CRDO", "ALAB"
     ],
-    "Tier 10 — AI-software/analytics at extreme multiples": [
-        "PLTR"
+    "Tier 8 — Memory cycle": [
+        "MU", "WDC", "STX", "EWY"
     ],
-    "Tier 11 — Server/integrator beta to NVIDIA cadence": [
-        "SMCI", "DELL", "CLS", "HPE"
+    "Tier 9 — AI-utility plays, contracted revenue cushion": [
+        "VST", "CEG", "TLN", "NRG", "NEE"
+    ],
+    "Tier 10 — Server integrators, track NVIDIA cadence": [
+        "SMCI", "DELL", "HPE"
+    ],
+    "Tier 11 — Cooling/power/networking infrastructure, backlog cushion": [
+        "VRT", "ETN", "MOD", "AAON", "PH", "TT", "ANET"
+    ],
+    "Tier 12 — Data center REITs, lease-contract support": [
+        "DLR", "EQIX", "IRM"
+    ],
+    "Tier 13 — Semi cap equipment, diversified end-markets": [
+        "AMAT", "LRCX", "KLAC", "NVMI", "ONTO"
     ],
 }
 
