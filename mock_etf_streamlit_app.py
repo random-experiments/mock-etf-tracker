@@ -418,16 +418,23 @@ st.download_button(
     mime="text/csv",
 )
 
-underlying_prices = (
-    basket.prices
-    .reset_index()
-    .rename(columns={"index": "date"})
-    .melt(id_vars="date", var_name="ticker", value_name="closing_price")
+# Long-format export of underlying price data.
+# reset_index() may name the date column "index", "Date", or something else
+# depending on the DataFrame index name, so rename the first column explicitly.
+underlying_prices_wide = basket.prices.reset_index()
+underlying_prices_wide = underlying_prices_wide.rename(
+    columns={underlying_prices_wide.columns[0]: "date"}
+)
+
+underlying_prices = underlying_prices_wide.melt(
+    id_vars="date",
+    var_name="ticker",
+    value_name="closing_price",
 )
 underlying_prices["cohort"] = underlying_prices["ticker"].map(TICKER_TO_TIER)
 underlying_prices = underlying_prices[["date", "ticker", "cohort", "closing_price"]]
 underlying_prices = underlying_prices.sort_values(["date", "cohort", "ticker"])
-underlying_prices["date"] = underlying_prices["date"].dt.strftime("%Y-%m-%d")
+underlying_prices["date"] = pd.to_datetime(underlying_prices["date"]).dt.strftime("%Y-%m-%d")
 
 st.download_button(
     "Download underlying price data CSV",
