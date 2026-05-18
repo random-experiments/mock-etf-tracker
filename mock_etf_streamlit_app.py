@@ -88,7 +88,7 @@ class BasketResult:
 
 st.set_page_config(page_title="Mock ETF Tracker for AI-fueled ticker cohorts", page_icon="📈", layout="wide")
 
-st.title("Mock ETF Tracker")
+st.title("Mock ETF Tracker for AI-fueled ticker cohorts")
 st.caption("Synthetic equal-dollar basket with tier sleeves. Research tool only.")
 
 
