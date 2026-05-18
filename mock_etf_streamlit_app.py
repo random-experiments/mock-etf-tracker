@@ -210,7 +210,7 @@ with st.sidebar:
     base_value = st.number_input("Starting basket value", min_value=100.0, value=10_000.0, step=1_000.0)
 
     today = dt.date.today()
-    default_start = dt.date(2024, 1, 1)
+    default_start = dt.date(2022, 10, 14)
     start_date = st.date_input("Historical start date", value=default_start)
     end_date = st.date_input("Historical end date", value=today)
 
