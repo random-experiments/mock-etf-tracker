@@ -68,6 +68,9 @@ TIERS: Dict[str, List[str]] = {
     "Tier 13 — Semi cap equipment, diversified end-markets": [
         "AMAT", "LRCX", "KLAC", "NVMI", "ONTO"
     ],
+    "Tier 14 — Hyperscalers": [
+        "AMZN", "GOOG", "META", "MSFT", "NVDA"
+    ],
 }
 
 ALL_TICKERS = [ticker for tickers in TIERS.values() for ticker in tickers]
