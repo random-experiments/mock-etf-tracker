@@ -244,6 +244,12 @@ def build_basket(
     )
 
 
+def apply_y_axis_scale(fig, use_log_scale: bool):
+    y_axis_type = "log" if use_log_scale else "linear"
+    fig.update_yaxes(type=y_axis_type)
+    return fig
+
+
 with st.sidebar:
     st.header("Basket setup")
     base_value = st.number_input("Starting basket value", min_value=100.0, value=10_000.0, step=1_000.0)
@@ -266,6 +272,12 @@ with st.sidebar:
             "When enabled, a ticker that lacks a price at the basket start keeps its intended "
             "allocation as cash until its first available close. When disabled, those tickers are excluded."
         ),
+    )
+
+    use_log_scale = st.checkbox(
+        "Use log scale for chart y-axes",
+        value=False,
+        help="Applies a logarithmic y-axis to all charts.",
     )
 
     st.header("Custom session tickers")
@@ -420,6 +432,7 @@ if basket.excluded_tickers:
 st.subheader("Synthetic ETF value")
 plot_df = basket.total_value.rename("Mock ETF value").reset_index().rename(columns={"index": "Date"})
 fig = px.line(plot_df, x="Date", y="Mock ETF value")
+apply_y_axis_scale(fig, use_log_scale)
 st.plotly_chart(fig, use_container_width=True)
 
 st.subheader("Tier sleeves")
@@ -427,6 +440,7 @@ tier_plot = basket.value_by_tier.reset_index()
 tier_plot = tier_plot.rename(columns={tier_plot.columns[0]: "Date"})
 tier_long = tier_plot.melt(id_vars="Date", var_name="Tier", value_name="Value")
 fig_tier = px.line(tier_long, x="Date", y="Value", color="Tier")
+apply_y_axis_scale(fig_tier, use_log_scale)
 st.plotly_chart(fig_tier, use_container_width=True)
 
 st.subheader("Tier sleeves — faceted view")
@@ -442,6 +456,7 @@ fig_tier_faceted = px.line(
 )
 # Force each facet to use its own independent y-axis scale.
 fig_tier_faceted.update_yaxes(matches=None, showticklabels=True)
+apply_y_axis_scale(fig_tier_faceted, use_log_scale)
 for axis_name in fig_tier_faceted.layout:
     if axis_name.startswith("yaxis"):
         fig_tier_faceted.layout[axis_name].matches = None
@@ -454,6 +469,7 @@ latest_tiers = basket.value_by_tier.iloc[-1].sort_values(ascending=False)
 weights = (latest_tiers / latest_tiers.sum()).rename("Weight").reset_index()
 weights.columns = ["Tier", "Weight"]
 fig_weights = px.bar(weights, x="Tier", y="Weight")
+apply_y_axis_scale(fig_weights, use_log_scale)
 st.plotly_chart(fig_weights, use_container_width=True)
 
 st.subheader("Holdings")
@@ -514,6 +530,7 @@ if chart_tickers:
     chart_df = chart_df.rename(columns={chart_df.columns[0]: "Date"})
     chart_long = chart_df.melt(id_vars="Date", var_name="Ticker", value_name=y_label)
     fig_tickers = px.line(chart_long, x="Date", y=y_label, color="Ticker")
+    apply_y_axis_scale(fig_tickers, use_log_scale)
     st.plotly_chart(fig_tickers, use_container_width=True)
 else:
     st.info("Select one or more holdings to view individual charts.")
