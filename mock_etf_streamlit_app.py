@@ -375,7 +375,7 @@ st.subheader("Individual ticker charts")
 chart_tickers = st.multiselect(
     "Select holdings to chart",
     options=holdings.index.tolist(),
-    default=holdings.index.tolist()[: min(5, len(holdings.index))],
+    default=holdings.index.tolist()[: min(9, len(holdings.index))],
 )
 
 chart_mode = st.radio(
