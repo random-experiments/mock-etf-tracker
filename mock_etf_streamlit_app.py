@@ -50,7 +50,7 @@ TIERS: Dict[str, List[str]] = {
         "LITE", "COHR", "TSEM", "CRDO", "ALAB", "CIEN", "MTSI"
     ],
     "Tier 8 — Memory cycle": [
-        "MU", "WDC", "STX", "SNDK," "EWY"
+        "MU", "WDC", "STX", "SNDK", "EWY"
     ],
     "Tier 9 — AI-utility plays, contracted revenue cushion": [
         "VST", "CEG", "TLN", "NRG", "NEE", "GEV", "D"
