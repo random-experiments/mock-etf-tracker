@@ -77,10 +77,6 @@ TIERS: Dict[str, List[str]] = {
     ],
 }
 
-ALL_TICKERS = [ticker for tickers in TIERS.values() for ticker in tickers]
-TICKER_TO_TIER = {ticker: tier for tier, tickers in TIERS.items() for ticker in tickers}
-
-
 @dataclass
 class BasketResult:
     prices: pd.DataFrame
@@ -167,6 +163,8 @@ def build_basket(
     base_value: float,
     weighting_mode: str,
     staged_entry: bool,
+    tiers: Dict[str, List[str]],
+    ticker_to_tier: Dict[str, str],
 ) -> BasketResult:
     raw = prices[selected_tickers].copy().dropna(how="all")
     if raw.empty:
@@ -204,11 +202,11 @@ def build_basket(
     if weighting_mode == "Equal weight each ticker":
         allocation = pd.Series(base_value / len(included), index=included)
     else:
-        active_tiers = sorted({TICKER_TO_TIER[t] for t in included})
+        active_tiers = sorted({ticker_to_tier[t] for t in included})
         tier_allocation = base_value / len(active_tiers)
         allocation = pd.Series(index=included, dtype="float64")
         for tier in active_tiers:
-            tier_tickers = [t for t in included if TICKER_TO_TIER[t] == tier]
+            tier_tickers = [t for t in included if ticker_to_tier[t] == tier]
             allocation.loc[tier_tickers] = tier_allocation / len(tier_tickers)
 
     shares = allocation / start_prices
@@ -225,8 +223,8 @@ def build_basket(
     total_value = value_by_ticker.sum(axis=1)
 
     tier_frames = []
-    for tier in TIERS:
-        tier_tickers = [t for t in value_by_ticker.columns if TICKER_TO_TIER[t] == tier]
+    for tier in tiers:
+        tier_tickers = [t for t in value_by_ticker.columns if ticker_to_tier[t] == tier]
         if tier_tickers:
             tier_frames.append(value_by_ticker[tier_tickers].sum(axis=1).rename(tier))
     value_by_tier = pd.concat(tier_frames, axis=1)
@@ -269,10 +267,71 @@ with st.sidebar:
         ),
     )
 
+    st.header("Custom session tickers")
+
+    if "custom_tickers_by_tier" not in st.session_state:
+        st.session_state.custom_tickers_by_tier = {tier: [] for tier in TIERS}
+
+    custom_tier = st.selectbox("Add to cohort", list(TIERS.keys()))
+    custom_symbols_text = st.text_input(
+        "Symbols to add",
+        placeholder="Example: TSM, TXN, NXPI",
+    )
+
+    if st.button("Add symbols", use_container_width=True):
+        symbols = [
+            symbol.strip().upper()
+            for symbol in custom_symbols_text.replace("\n", ",").split(",")
+            if symbol.strip()
+        ]
+        all_existing = {
+            symbol
+            for tier, tickers in TIERS.items()
+            for symbol in tickers + st.session_state.custom_tickers_by_tier.get(tier, [])
+        }
+        added_symbols = []
+        skipped_symbols = []
+
+        for symbol in symbols:
+            if symbol in all_existing:
+                skipped_symbols.append(symbol)
+                continue
+
+            st.session_state.custom_tickers_by_tier[custom_tier].append(symbol)
+            all_existing.add(symbol)
+            added_symbols.append(symbol)
+
+        if added_symbols:
+            st.success("Added for this session: " + ", ".join(added_symbols))
+        if skipped_symbols:
+            st.info("Already present, skipped: " + ", ".join(skipped_symbols))
+
+    custom_total = sum(len(tickers) for tickers in st.session_state.custom_tickers_by_tier.values())
+    if custom_total:
+        custom_rows = [
+            {"Cohort": tier, "Symbol": symbol}
+            for tier, tickers in st.session_state.custom_tickers_by_tier.items()
+            for symbol in tickers
+        ]
+        st.dataframe(pd.DataFrame(custom_rows), hide_index=True, use_container_width=True)
+        if st.button("Clear custom symbols", use_container_width=True):
+            st.session_state.custom_tickers_by_tier = {tier: [] for tier in TIERS}
+            st.rerun()
+
+    working_tiers = {
+        tier: tickers + st.session_state.custom_tickers_by_tier.get(tier, [])
+        for tier, tickers in TIERS.items()
+    }
+    ticker_to_tier = {
+        ticker: tier
+        for tier, tickers in working_tiers.items()
+        for ticker in tickers
+    }
+
     st.header("Include tiers")
 
     # Initialize editable tier checkbox state once.
-    for tier in TIERS:
+    for tier in working_tiers:
         state_key = f"tier_selected_{tier}"
         if state_key not in st.session_state:
             st.session_state[state_key] = True
@@ -280,17 +339,17 @@ with st.sidebar:
     bulk_col1, bulk_col2 = st.columns(2)
     with bulk_col1:
         if st.button("Select all tiers", use_container_width=True):
-            for tier in TIERS:
+            for tier in working_tiers:
                 st.session_state[f"tier_selected_{tier}"] = True
     with bulk_col2:
         if st.button("Select no tiers", use_container_width=True):
-            for tier in TIERS:
+            for tier in working_tiers:
                 st.session_state[f"tier_selected_{tier}"] = False
 
     selected_tiers = []
     st.caption("Use the buttons for bulk changes, then adjust individual tiers below.")
 
-    for tier in TIERS:
+    for tier in working_tiers:
         checked = st.checkbox(
             tier,
             key=f"tier_selected_{tier}",
@@ -298,7 +357,7 @@ with st.sidebar:
         if checked:
             selected_tiers.append(tier)
 
-    selected_tickers = [ticker for tier in selected_tiers for ticker in TIERS[tier]]
+    selected_tickers = [ticker for tier in selected_tiers for ticker in working_tiers[tier]]
 
     st.header("Optional exclusions")
     excluded = st.multiselect("Remove tickers", selected_tickers, default=[])
@@ -321,7 +380,15 @@ if prices.empty:
     st.stop()
 
 try:
-    basket = build_basket(prices, selected_tickers, base_value, weighting_mode, staged_entry)
+    basket = build_basket(
+        prices,
+        selected_tickers,
+        base_value,
+        weighting_mode,
+        staged_entry,
+        working_tiers,
+        ticker_to_tier,
+    )
 except ValueError as exc:
     st.error(str(exc))
     st.stop()
@@ -390,7 +457,7 @@ st.plotly_chart(fig_weights, use_container_width=True)
 
 st.subheader("Holdings")
 holdings = pd.DataFrame({
-    "Tier": [TICKER_TO_TIER[t] for t in basket.included_tickers],
+    "Tier": [ticker_to_tier[t] for t in basket.included_tickers],
     "First price date": basket.start_dates,
     "Start price": basket.start_prices,
     "Shares held": basket.shares,
@@ -477,7 +544,7 @@ underlying_prices = underlying_prices_wide.melt(
     var_name="ticker",
     value_name="closing_price",
 )
-underlying_prices["cohort"] = underlying_prices["ticker"].map(TICKER_TO_TIER)
+underlying_prices["cohort"] = underlying_prices["ticker"].map(ticker_to_tier)
 underlying_prices = underlying_prices[["date", "ticker", "cohort", "closing_price"]]
 underlying_prices = underlying_prices.sort_values(["date", "cohort", "ticker"])
 underlying_prices["date"] = pd.to_datetime(underlying_prices["date"]).dt.strftime("%Y-%m-%d")
