@@ -22,7 +22,6 @@ import datetime as dt
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
-import requests
 import pandas as pd
 import plotly.express as px
 import streamlit as st
@@ -108,18 +107,6 @@ DEFAULT_SUBTITLE = (
 st.caption(DEFAULT_SUBTITLE)
 
 
-@st.cache_resource
-def _yf_session() -> requests.Session:
-    """Shared session with a browser User-Agent to reduce Yahoo Finance bot-blocking on cloud IPs."""
-    s = requests.Session()
-    s.headers["User-Agent"] = (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/124.0.0.0 Safari/537.36"
-    )
-    return s
-
-
 def _fetch_single(symbol: str, start: dt.date, end: dt.date) -> pd.Series:
     """Download adjusted close for one symbol; returns empty Series on failure."""
     end_plus_one = end + dt.timedelta(days=1)
@@ -131,7 +118,6 @@ def _fetch_single(symbol: str, start: dt.date, end: dt.date) -> pd.Series:
             auto_adjust=True,
             progress=False,
             threads=False,
-            session=_yf_session(),
         )
     except Exception:
         return pd.Series(dtype="float64", name=symbol)
@@ -179,7 +165,6 @@ def download_prices(tickers: Tuple[str, ...], start: dt.date, end: dt.date) -> p
                 auto_adjust=True,
                 progress=False,
                 threads=False,
-                session=_yf_session(),
             )
         except Exception:
             data = None
