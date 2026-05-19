@@ -122,12 +122,12 @@ def download_one_ticker(ticker: str, start: dt.date, end: dt.date) -> pd.Series:
             threads=False,
         )
         if data.empty:
-            return pd.Series(dtype="float64", name=ticker)
+            return pd.Series(dtype="float64", name=symbol)
 
         close = data["Close"]
         if isinstance(close, pd.DataFrame):
             close = close.iloc[:, 0]
-        close.name = ticker
+        close.name = symbol
         close.index = pd.to_datetime(close.index).tz_localize(None)
         return close.dropna()
 
