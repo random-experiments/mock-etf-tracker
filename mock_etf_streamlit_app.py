@@ -292,13 +292,16 @@ with st.sidebar:
     if "custom_tickers_by_tier" not in st.session_state:
         st.session_state.custom_tickers_by_tier = {tier: [] for tier in TIERS}
 
-    custom_tier = st.selectbox("Add to cohort", list(TIERS.keys()))
-    custom_symbols_text = st.text_input(
-        "Symbols to add",
-        placeholder="Example: TSM, TXN, NXPI",
-    )
+    with st.form("custom_tickers_form"):
+        custom_tier = st.selectbox("Add to cohort", list(TIERS.keys()))
+        custom_symbols_text = st.text_input(
+            "Symbols to add",
+            placeholder="Example: TSM, TXN, NXPI",
+        )
 
-    if st.button("Add symbols", use_container_width=True):
+        submit_custom = st.form_submit_button("Add symbols", use_container_width=True)
+
+    if submit_custom:
         symbols = [
             symbol.strip().upper()
             for symbol in custom_symbols_text.replace("\n", ",").split(",")
