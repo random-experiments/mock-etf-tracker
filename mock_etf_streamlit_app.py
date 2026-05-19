@@ -19,11 +19,13 @@ This is for research/watchlist use, not investment advice.
 from __future__ import annotations
 
 import datetime as dt
+import time
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
 import pandas as pd
 import plotly.express as px
+import requests
 import streamlit as st
 import yfinance as yf
 
@@ -113,6 +115,12 @@ def download_one_ticker(ticker: str, start: dt.date, end: dt.date) -> pd.Series:
     end_plus_one = end + dt.timedelta(days=1)
 
     def fetch(symbol: str) -> pd.Series:
+        time.sleep(0.5)  # Throttle to prevent Yahoo rate-limiting on cloud IPs
+        session = requests.Session()
+        session.headers.update({
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        })
+
         data = yf.download(
             symbol,
             start=start.isoformat(),
@@ -120,6 +128,7 @@ def download_one_ticker(ticker: str, start: dt.date, end: dt.date) -> pd.Series:
             auto_adjust=True,
             progress=False,
             threads=False,
+            session=session,
         )
         if data.empty:
             return pd.Series(dtype="float64", name=symbol)
