@@ -26,54 +26,55 @@ import plotly.express as px
 import streamlit as st
 import yfinance as yf
 
-
 TIERS: Dict[str, List[str]] = {
     "Tier 1 — Pre-revenue speculative, highest canary value": [
         "OKLO", "SMR", "NNE", "LEU", "RGTI", "QBTS", "QUBT", "IONQ"
     ],
     "Tier 2 — Specialty silicon/optical micro-caps, AXTI archetype": [
-        "AXTI", "POET", "AAOI", "MVIS", "KOPN", "AMBA", "WOLF", "AEHR"
+        "AXTI", "POET", "AAOI", "MVIS", "KOPN", "AMBA", "WOLF", "AEHR", "NVTS"
     ],
     "Tier 3 — Crypto-to-AI pivots, no AI revenue yet": [
-        "KEEL", "BTDR", "CLSK", "HIVE", "RIOT", "MARA", "CIFR"
+        "KEEL", "BTDR", "CLSK", "HIVE", "RIOT", "MARA", "CIFR", "WULF", "CORZ"
     ],
     "Tier 4 — AI-tagged small-cap software, valuation/revenue mismatch": [
-        "BBAI", "SOUN", "AI", "TEM", "SERV", "SYM"
+        "BBAI", "SOUN", "AI", "TEM", "SERV", "SYM", "PATH"
     ],
     "Tier 5 — AI-software extreme multiples, real revenue": [
-        "PLTR", "APP", "SNOW", "NET", "DDOG", "MDB", "CFLT", "ESTC", "GTLB", "FROG", "TTD"
+        "PLTR", "APP", "SNOW", "NET", "DDOG", "MDB", "CFLT", "ESTC", "GTLB", "FROG", "TTD",
+        "CRWD", "NOW", "ZS"
     ],
     "Tier 6 — AI infra real-but-stretched, AI-priced multiples": [
         "APLD", "IREN", "CRWV", "NBIS", "CLS"
     ],
     "Tier 7 — Silicon photonics/optical established": [
-        "LITE", "COHR", "TSEM", "CRDO", "ALAB"
+        "LITE", "COHR", "TSEM", "CRDO", "ALAB", "CIEN", "MTSI"
     ],
     "Tier 8 — Memory cycle": [
         "MU", "WDC", "STX", "EWY"
     ],
     "Tier 9 — AI-utility plays, contracted revenue cushion": [
-        "VST", "CEG", "TLN", "NRG", "NEE"
+        "VST", "CEG", "TLN", "NRG", "NEE", "GEV", "D"
     ],
     "Tier 10 — Server integrators, track NVIDIA cadence": [
-        "SMCI", "DELL", "HPE"
+        "SMCI", "DELL", "HPE", "PSTG"
     ],
     "Tier 11 — Cooling/power/networking infrastructure, backlog cushion": [
-        "VRT", "ETN", "MOD", "AAON", "PH", "TT", "ANET"
+        "VRT", "ETN", "MOD", "AAON", "PH", "TT", "ANET", "POWL", "HUBB"
     ],
     "Tier 12 — Data center REITs, lease-contract support": [
         "DLR", "EQIX", "IRM"
     ],
     "Tier 13 — Semi cap equipment, diversified end-markets": [
-        "AMAT", "LRCX", "KLAC", "NVMI", "ONTO"
+        "AMAT", "LRCX", "KLAC", "NVMI", "ONTO", "ASML", "TER"
     ],
     "Tier 14 — The Champ Chips": [
-        "NVDA", "AVGO", "AMD", "MRVL", "ARM", "INTC"
+        "NVDA", "AVGO", "AMD", "MRVL", "ARM", "INTC", "MPWR", "QCOM"
     ],
     "Tier 15 — Hyperscalers": [
         "AMZN", "GOOGL", "META", "MSFT", "ORCL"
     ],
 }
+
 
 ALL_TICKERS = [ticker for tickers in TIERS.values() for ticker in tickers]
 TICKER_TO_TIER = {ticker: tier for tier, tickers in TIERS.items() for ticker in tickers}
