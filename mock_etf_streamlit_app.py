@@ -77,6 +77,10 @@ TIERS: Dict[str, List[str]] = {
     ],
 }
 
+# Tiers listed here appear in the sleeve charts as indexed price performance
+# but do NOT contribute to basket allocation. Their tickers may overlap other tiers.
+WATCHLIST_TIERS: set = {"Tier 15 — Parabolic Seven "}
+
 @dataclass
 class BasketResult:
     prices: pd.DataFrame
@@ -222,6 +226,7 @@ def build_basket(
     staged_entry: bool,
     tiers: Dict[str, List[str]],
     ticker_to_tier: Dict[str, str],
+    watchlist_tiers: Dict[str, List[str]],
 ) -> BasketResult:
     # Only attempt to process tickers that were successfully downloaded
     valid_tickers = [t for t in selected_tickers if t in prices.columns]
@@ -287,6 +292,21 @@ def build_basket(
         if tier_tickers:
             tier_frames.append(value_by_ticker[tier_tickers].sum(axis=1).rename(tier))
     value_by_tier = pd.concat(tier_frames, axis=1)
+
+    # Watchlist tiers: equal-weighted indexed price performance, not dollar allocation.
+    # Each ticker is indexed from its own first valid price so staged-entry tickers
+    # don't drag the series down before they start trading.
+    for wl_tier, wl_tickers in watchlist_tiers.items():
+        available = [t for t in wl_tickers if t in prices.columns]
+        if not available:
+            continue
+        wl_px = prices[available].loc[actual_start_date:].ffill()
+        first_valid = wl_px.apply(lambda s: s.dropna().iloc[0] if s.notna().any() else None)
+        valid_wl = [t for t in available if pd.notna(first_valid[t]) and first_valid[t] != 0]
+        if not valid_wl:
+            continue
+        indexed = wl_px[valid_wl].divide(first_valid[valid_wl], axis=1) * 100
+        value_by_tier = pd.concat([value_by_tier, indexed.mean(axis=1).rename(wl_tier).to_frame()], axis=1)
 
     return BasketResult(
         prices=clean,
@@ -403,11 +423,16 @@ with st.sidebar:
         tier: tickers + st.session_state.custom_tickers_by_tier.get(tier, [])
         for tier, tickers in TIERS.items()
     }
-    ticker_to_tier = {
-        ticker: tier
-        for tier, tickers in working_tiers.items()
-        for ticker in tickers
-    }
+    ticker_to_tier: Dict[str, str] = {}
+    for _tier, _tickers in working_tiers.items():
+        if _tier not in WATCHLIST_TIERS:
+            for _t in _tickers:
+                ticker_to_tier[_t] = _tier
+    for _tier, _tickers in working_tiers.items():
+        if _tier in WATCHLIST_TIERS:
+            for _t in _tickers:
+                if _t not in ticker_to_tier:
+                    ticker_to_tier[_t] = _tier
 
     st.header("Include tiers")
 
@@ -431,14 +456,32 @@ with st.sidebar:
     st.caption("Use the buttons for bulk changes, then adjust individual tiers below.")
 
     for tier in working_tiers:
+        label = f"{tier}  [watchlist]" if tier in WATCHLIST_TIERS else tier
         checked = st.checkbox(
-            tier,
+            label,
             key=f"tier_selected_{tier}",
         )
         if checked:
             selected_tiers.append(tier)
 
-    selected_tickers = [ticker for tier in selected_tiers for ticker in working_tiers[tier]]
+    selected_tickers = list(dict.fromkeys(
+        ticker for tier in selected_tiers
+        for ticker in working_tiers[tier]
+        if tier not in WATCHLIST_TIERS
+    ))
+    watchlist_selected = {
+        tier: working_tiers[tier]
+        for tier in selected_tiers
+        if tier in WATCHLIST_TIERS
+    }
+
+    # If only watchlist tiers are selected there are no overlapping basket tickers,
+    # so promote watchlist tickers to the basket for this run.
+    if not selected_tickers and watchlist_selected:
+        selected_tickers = list(dict.fromkeys(
+            t for tickers in watchlist_selected.values() for t in tickers
+        ))
+        watchlist_selected = {}
 
     st.header("Optional exclusions")
     excluded = st.multiselect("Remove tickers", selected_tickers, default=[])
@@ -470,6 +513,7 @@ try:
         staged_entry,
         working_tiers,
         ticker_to_tier,
+        watchlist_selected,
     )
 except ValueError as exc:
     st.error(str(exc))
@@ -485,6 +529,15 @@ c1.metric("Current mock ETF value", f"${latest_value:,.2f}", f"{percent_return:.
 c2.metric("Starting value", f"${start_value:,.2f}")
 c3.metric("Dollar P/L", f"${absolute_return:,.2f}")
 c4.metric("Included tickers", len(basket.included_tickers))
+
+if watchlist_selected:
+    wl_ticker_list = ", ".join(
+        t for tickers in watchlist_selected.values() for t in tickers
+    )
+    st.info(
+        f"Watchlist overlay active — the following tickers are **not** counted in the mock ETF "
+        f"(they are shown in tier sleeve and individual charts only): {wl_ticker_list}"
+    )
 
 if basket.delayed_tickers:
     st.info(
@@ -506,6 +559,12 @@ apply_y_axis_scale(fig, use_log_scale)
 st.plotly_chart(fig, use_container_width=True)
 
 st.subheader("Tier sleeves")
+if watchlist_selected:
+    wl_names = ", ".join(watchlist_selected.keys())
+    st.caption(
+        f"Watchlist tiers ({wl_names}) show equal-weighted indexed price performance "
+        f"(not dollar allocation) and are independent of the mock ETF value above."
+    )
 tier_chart_values = basket.value_by_tier.copy()
 if tier_chart_mode == "Indexed value":
     tier_chart_values = tier_chart_values.divide(tier_chart_values.iloc[0]) * 100
@@ -575,10 +634,27 @@ st.dataframe(
 )
 
 st.subheader("Individual ticker charts")
+
+# Build a combined price DataFrame that includes basket + watchlist tickers.
+_wl_chart_tickers = [
+    t for tier_tickers in watchlist_selected.values()
+    for t in tier_tickers
+    if t not in basket.included_tickers and t in prices.columns
+]
+_chart_prices = (
+    basket.prices.join(
+        prices[_wl_chart_tickers].loc[basket.prices.index[0]:].ffill(),
+        how="left",
+    )
+    if _wl_chart_tickers
+    else basket.prices
+)
+_chart_options = holdings.index.tolist() + _wl_chart_tickers
+
 chart_tickers = st.multiselect(
     "Select holdings to chart",
-    options=holdings.index.tolist(),
-    default=holdings.index.tolist()[: min(9, len(holdings.index))],
+    options=_chart_options,
+    default=_chart_options[: min(9, len(_chart_options))],
 )
 
 chart_mode = st.radio(
@@ -589,18 +665,17 @@ chart_mode = st.radio(
 
 if chart_tickers:
     if chart_mode == "Indexed price return":
-        chart_data = basket.prices[chart_tickers].copy()
-        # Staged-entry tickers have blank prices before their first trading date.
-        # Index each ticker from its own first valid price instead of the basket's first row.
+        chart_data = _chart_prices[chart_tickers].copy()
         first_prices = chart_data.apply(lambda s: s.dropna().iloc[0] if s.notna().any() else pd.NA)
         chart_data = chart_data.divide(first_prices, axis=1) * 100
         y_label = "Indexed value, first price = 100"
     elif chart_mode == "Price":
-        chart_data = basket.prices[chart_tickers]
+        chart_data = _chart_prices[chart_tickers]
         y_label = "Price"
     else:
-        # This includes staged-entry cash before the ticker's first available price.
-        chart_data = basket.value_by_ticker[chart_tickers]
+        # Watchlist-only tickers have no basket allocation; filter them out for this mode.
+        basket_chart_tickers = [t for t in chart_tickers if t in basket.value_by_ticker.columns]
+        chart_data = basket.value_by_ticker[basket_chart_tickers]
         y_label = "Holding value, including staged cash"
 
     chart_df = chart_data.reset_index()
