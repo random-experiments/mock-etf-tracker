@@ -72,6 +72,9 @@ TIERS: Dict[str, List[str]] = {
     "Tier 14 — Hyperscalers": [
         "AMZN", "GOOGL", "META", "MSFT", "ORCL"
     ],
+    "Tier 15 — Parabolic Seven ": [
+        "AVGO", "AMD", "MU", "DELL", "MRVL", "INTC", "SNDK",
+    ],
 }
 
 @dataclass
