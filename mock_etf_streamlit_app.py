@@ -72,14 +72,17 @@ TIERS: Dict[str, List[str]] = {
     "Tier 14 — Hyperscalers": [
         "AMZN", "GOOGL", "META", "MSFT", "ORCL"
     ],
-    "Tier 15 — Parabolic Seven ": [
+    "Tier 15 — Parabolic Seven": [
         "AVGO", "AMD", "MU", "DELL", "MRVL", "INTC", "SNDK",
+    ],
+    "Tier 16 - Semi's ETF": [
+        "SMH", "SOXX",
     ],
 }
 
 # Tiers listed here appear in the sleeve charts as indexed price performance
 # but do NOT contribute to basket allocation. Their tickers may overlap other tiers.
-WATCHLIST_TIERS: set = {"Tier 15 — Parabolic Seven "}
+WATCHLIST_TIERS: set = {"Tier 15 — Parabolic Seven", "Tier 16 - Semi's ETF"}
 
 @dataclass
 class BasketResult:
