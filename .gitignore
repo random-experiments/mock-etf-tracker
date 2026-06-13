@@ -1,0 +1,4 @@
+market_data.db
+.claude/settings.local.json
+__pycache__/
+*.pyc

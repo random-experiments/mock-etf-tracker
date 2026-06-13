@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git commit -m ' *)",
+      "Skill(run)",
+      "Skill(run:*)",
+      "Bash(streamlit run *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8501/)",
+      "WebFetch(domain:localhost)",
+      "PowerShell(\\(Invoke-WebRequest -Uri \"http://localhost:8501/\" -UseBasicParsing\\).Content | Select-String -Pattern \"error|Error|traceback|Traceback|exception|Exception\" | Select-Object -First 10)",
+      "Bash(Get-ChildItem -Recurse .claude/)"
+    ]
+  }
+}
