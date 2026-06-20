@@ -87,66 +87,6 @@ TIERS: Dict[str, List[str]] = {
 # but do NOT contribute to basket allocation. Their tickers may overlap other tiers.
 WATCHLIST_TIERS: set = {"Reference — Parabolic Seven", "Reference - Semi's ETFs", "References - Indices ETFs"} 
 
-# --- Cohort ordering metadata -------------------------------------------------
-# The tier NUMBER is a stable identifier, NOT a claim about ordering. Each cohort
-# carries independent axes so sleeves can be ordered by whichever lens is useful:
-#   chain    : position in the cash-flow chain. 1 = source of capex cash
-#              (hyperscalers), ascending to the most-derived / peripheral claim on it.
-#   viability / valuation / cyclical / financing : fragility on each axis,
-#              1 = robust, 5 = most exposed.
-#   canary   : mean of the four fragility axes (computed below); high = breaks first.
-# Scores are a coarse first-pass scaffold — tune them.
-_FRAGILITY: Dict[str, Dict[str, float]] = {
-    "Tier 1 — Pre-revenue speculative, highest canary value":            dict(chain=14, viability=5, valuation=5, cyclical=4, financing=5),
-    "Tier 2 — Specialty silicon/optical micro-caps, AXTI archetype":     dict(chain=13, viability=4, valuation=4, cyclical=5, financing=4),
-    "Tier 3 — Crypto-to-AI pivots, no AI revenue yet":                   dict(chain=12, viability=4, valuation=4, cyclical=5, financing=4),
-    "Tier 4 — AI-tagged small-cap software, valuation/revenue mismatch": dict(chain=11, viability=4, valuation=5, cyclical=3, financing=3),
-    "Tier 5 — AI-software extreme multiples, real revenue":              dict(chain=10, viability=2, valuation=5, cyclical=3, financing=2),
-    "Tier 6 — AI infra real-but-stretched, AI-priced multiples":        dict(chain=9,  viability=3, valuation=5, cyclical=4, financing=5),
-    "Tier 7 — Silicon photonics/optical established":                    dict(chain=5,  viability=2, valuation=3, cyclical=3, financing=2),
-    "Tier 8 — Memory cycle":                                             dict(chain=3,  viability=1, valuation=4, cyclical=5, financing=2),
-    "Tier 9 — Server integrators, track NVIDIA cadence":                dict(chain=8,  viability=3, valuation=3, cyclical=4, financing=3),
-    "Tier 10 — Cooling/power/networking infrastructure, backlog cushion": dict(chain=6, viability=1, valuation=3, cyclical=3, financing=1),
-    "Tier 11 — Data center REITs, lease-contract support":               dict(chain=7,  viability=2, valuation=2, cyclical=2, financing=3),
-    "Tier 12 — Semi cap equipment, diversified end-markets":             dict(chain=4,  viability=1, valuation=3, cyclical=4, financing=1),
-    "Tier 13 — The Champ Chips":                                         dict(chain=2,  viability=1, valuation=4, cyclical=3, financing=1),
-    "Tier 14 — Hyperscalers":                                            dict(chain=1,  viability=1, valuation=3, cyclical=2, financing=1),
-}
-COHORT_META: Dict[str, Dict[str, float]] = {}
-for _name, _scores in _FRAGILITY.items():
-    _scores = dict(_scores)
-    _scores["canary"] = (
-        _scores["viability"] + _scores["valuation"]
-        + _scores["cyclical"] + _scores["financing"]
-    ) / 4
-    COHORT_META[_name] = _scores
-
-# Sleeve ordering options: display label -> (metadata field, sort descending?).
-ORDER_AS_DEFINED = "As defined (original pressure/unwind order)"
-ORDER_AXES: Dict[str, Tuple[str, bool]] = {
-    "Dependency chain (cash source → most derived)": ("chain", False),
-    "Canary fragility (most fragile first)":            ("canary", True),
-    "Valuation risk (highest first)":                   ("valuation", True),
-    "Cyclical amplitude (highest first)":               ("cyclical", True),
-    "Financing fragility (highest first)":              ("financing", True),
-}
-
-
-def order_tiers(tier_names, axis: str) -> List[str]:
-    """Reorder cohort labels by the chosen axis. Cohorts without metadata
-    (reference/watchlist sleeves) always sort to the end, original order kept."""
-    names = list(tier_names)
-    core = [n for n in names if n not in WATCHLIST_TIERS]
-    refs = [n for n in names if n in WATCHLIST_TIERS]
-    if axis != ORDER_AS_DEFINED and axis in ORDER_AXES:
-        field, reverse = ORDER_AXES[axis]
-        with_meta = [n for n in core if n in COHORT_META]
-        without = [n for n in core if n not in COHORT_META]
-        with_meta.sort(key=lambda n: COHORT_META[n][field], reverse=reverse)
-        core = with_meta + without
-    return core + refs
-
-
 @dataclass
 class BasketResult:
     prices: pd.DataFrame
@@ -167,7 +107,7 @@ st.title("Mock ETF Tracker for AI-fueled ticker cohorts")
 
 DEFAULT_SUBTITLE = (
     "As much as I love AI, all bubbles burst, usually in tiers/cohorts. " 
-    "Cohorts are ordered by a selectable lens (default: the original pressure/unwind sequence). "
+    "Tiers are organized in the order they might come under pressure and unwind. "
     "This app builds a synthetic equal-dollar basket from user-defined AI-related ticker cohorts. "
     "It downloads adjusted historical prices, creates fixed-share holdings from the selected start date, "
     "tracks total basket value, compares cohort sleeves, displays current sleeve weights, and exports the underlying price data. "
@@ -431,17 +371,6 @@ with st.sidebar:
         help="Indexed value starts each selected tier at 100 for cleaner cohort comparison.",
     )
 
-    order_axis = st.selectbox(
-        "Order cohort sleeves by",
-        [ORDER_AS_DEFINED] + list(ORDER_AXES.keys()),
-        index=0,
-        help=(
-            "Reorders the tier list and every sleeve chart. 'As defined' keeps the "
-            "original sequence (zero change). Other axes sort by independent cohort "
-            "attributes in COHORT_META. Reference/watchlist sleeves always sort last."
-        ),
-    )
-
     st.header("Custom session tickers")
 
     if "custom_tickers_by_tier" not in st.session_state:
@@ -500,7 +429,6 @@ with st.sidebar:
         tier: tickers + st.session_state.custom_tickers_by_tier.get(tier, [])
         for tier, tickers in TIERS.items()
     }
-    working_tiers = {k: working_tiers[k] for k in order_tiers(working_tiers, order_axis)}
     ticker_to_tier: Dict[str, str] = {}
     for _tier, _tickers in working_tiers.items():
         if _tier not in WATCHLIST_TIERS:
@@ -637,7 +565,6 @@ apply_y_axis_scale(fig, use_log_scale)
 st.plotly_chart(fig, use_container_width=True)
 
 st.subheader("Tier sleeves")
-st.caption(f"Sleeve order: {order_axis}.")
 if watchlist_selected:
     wl_names = ", ".join(watchlist_selected.keys())
     st.caption(
