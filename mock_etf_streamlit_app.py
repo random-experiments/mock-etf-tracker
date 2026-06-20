@@ -574,7 +574,7 @@ if start_date >= end_date:
     st.warning("Start date must be before end date.")
     st.stop()
 
-all_tickers = tuple(t for tickers in working_tiers.values() for t in tickers)
+all_tickers = tuple(sorted(set(t for tickers in working_tiers.values() for t in tickers)))
 with st.spinner("Downloading price history..."):
     prices, volumes = download_prices(all_tickers, start_date, end_date)
 
