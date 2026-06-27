@@ -161,7 +161,7 @@ class BasketResult:
     delayed_tickers: List[str]
 
 
-st.set_page_config(page_title="Mock ETF Tracker for AI-fueled ticker cohorts", page_icon="📈", layout="wide")
+st.set_page_config(page_title="Mock ETF Tracker for AI-fueled tickers and cohorts", page_icon="📈", layout="wide")
 
 st.title("Mock ETF Tracker for AI-fueled ticker cohorts")
 
