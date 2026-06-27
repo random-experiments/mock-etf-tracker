@@ -271,7 +271,7 @@ def download_prices(
 
     prices = pd.concat(list(price_frames.values()), axis=1)
     prices.columns = pd.Index(list(price_frames.keys()))
-    prices = prices.sort_index().ffill()
+    prices = prices.sort_index()
 
     if volume_frames:
         volumes = pd.concat(list(volume_frames.values()), axis=1)
@@ -783,7 +783,8 @@ st.download_button(
 # Long-format export of underlying price data.
 # reset_index() may name the date column "index", "Date", or something else
 # depending on the DataFrame index name, so rename the first column explicitly.
-underlying_prices_wide = basket.prices.reset_index()
+underlying_price_cols = [t for t in basket.included_tickers if t in prices.columns]
+underlying_prices_wide = prices[underlying_price_cols].loc[basket.prices.index[0]:].reset_index()
 underlying_prices_wide = underlying_prices_wide.rename(
     columns={underlying_prices_wide.columns[0]: "date"}
 )
